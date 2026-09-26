@@ -7,7 +7,7 @@ WASM_DIR := target/wasm32v1-none/release
 SHELL := bash
 
 .PHONY: all help build release-build optimize test test-all fmt lint check check-docs \
-        size size-check doc audit bench deploy e2e clean fuzz-cl
+        check-abi size size-check doc audit bench deploy e2e clean fuzz-cl
 
 # Bare `make` explains itself instead of building.
 .DEFAULT_GOAL := help
@@ -57,6 +57,9 @@ lint: ## cargo clippy --all -- -D warnings
 check-docs: ## Verify docs/error-codes.md matches #[contracterror] enums
 	bash scripts/check_error_docs.sh
 
+check-abi: build ## Verify docs/abi.json matches built contracts
+	bash scripts/check_abi.sh
+
 size: ## Print a WASM size report for all built contracts
 	bash scripts/size_report.sh
 
@@ -73,7 +76,7 @@ audit: ## Run a security audit of dependencies (cargo install cargo-audit if mis
 	}
 	cargo audit
 
-check: fmt lint test check-docs size-check doc ## Run the checks CI enforces before pushing
+check: fmt lint test check-docs check-abi size-check doc ## Run the checks CI enforces before pushing
 
 bench: ## Run hot-path benchmarks
 	cargo run -p benches -- --check

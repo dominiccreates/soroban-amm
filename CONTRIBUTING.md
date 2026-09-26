@@ -104,6 +104,7 @@ make test-all   # run tests for the whole workspace
 make fmt        # cargo fmt --all
 make lint       # cargo clippy --all -- -D warnings
 make check-docs # verify docs/error-codes.md matches #[contracterror] enums
+make check-abi  # verify docs/abi.json matches built contracts (regenerate with scripts/generate_abi.sh)
 make size       # print a WASM size report for all built contracts
 make size-check # fail if any contract WASM exceeds the size limit
 make doc        # build workspace docs with warnings denied
