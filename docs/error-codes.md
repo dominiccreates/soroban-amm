@@ -10,24 +10,8 @@ Soroban AMM contracts across all contract crates in `contracts/`. For each code 
 - **Remedy** – actionable instructions for the caller to recover.
 
 Use the numeric code when parsing RPC responses or writing off-chain tooling.
-## Factory
 
-| Code | Name | Description |
-|------|------------|---------------------------------------------------------------
-| 0 | AlreadyInitialized | Factory is already initialized |
-| 1 | Unauthorized | Caller is not the admin |
-| 2 | PoolAlreadyExists | A pool for the pair already exists |
-| 3 | PoolNotFound | Pool lookup failed |
-| 4 | UnknownPool | The pool address is not a factory-deployed pool |
-| 5 | LabelTooLong | Metadata label exceeds 64 bytes |
-| 6 | InvalidOffset | Offset beyond the available pool list |
-
-## Concentrated Liquidity
-
-
-(TODO)
-
-## Oracle Aggregator (`contracts/oracle_aggregator`)
+## OracleAggregator (`contracts/oracle_aggregator`)
 
 Defined in [contracts/oracle_aggregator/src/lib.rs](../contracts/oracle_aggregator/src/lib.rs) as `OracleError`.
 
@@ -52,7 +36,7 @@ Defined in [contracts/oracle_aggregator/src/lib.rs](../contracts/oracle_aggregat
 > 10 000 to confidence, not 1. This is a breaking change for off-chain consumers
 > that interpreted `confidence` as a source count.
 
-## Governance
+## Amm (`contracts/amm`)
 
 
 Defined in [contracts/amm/src/lib.rs](../contracts/amm/src/lib.rs) as `AmmError`.
@@ -153,21 +137,6 @@ Defined in [contracts/batch_router/src/lib.rs](../contracts/batch_router/src/lib
 | 5 | `InvalidAmount` | A `Swap`/`AddLiquidity`/`RemoveLiquidity` op carried a non-positive `amount_in`/`amount_a`/`amount_b`/`shares`. | Ensure every op amount is strictly positive. |
 | 6 | `PoolNotFound` | An op named a pool the configured factory does not recognize (`get_pool_tokens` returned `None`). | Target only pools registered with the batch router's factory. |
 | 7 | `SlippageExceeded` | The simulated or executed output/shares fell below the op's `min_out`/`min_shares`/`min_a`/`min_b` guard. | Loosen the slippage guard or resubmit against fresher pool state. |
-
----
-
-## ClPositionNft (`contracts/cl_position_nft`)
-
-Defined in [contracts/cl_position_nft/src/lib.rs](../contracts/cl_position_nft/src/lib.rs) as `NftError`.
-
-| Code | Symbol | Cause | Remedy |
-|------|--------|-------|--------|
-| 1 | `AlreadyInitialized` | `initialize` called on an already configured NFT contract. | Deploy a fresh NFT contract. |
-| 2 | `Unauthorized` | Restricted method called by non-admin or unauthorized address. | Invoke function using admin or registered CL pool credentials. |
-| 3 | `TokenNotFound` | Operation referenced a non-existent or burned `token_id`. | Query existing tokens using `owner_of` to confirm `token_id`. |
-| 4 | `NotOwnerOrApproved` | Transfer or burn attempted by caller who is neither token owner nor approved operator. | Execute call from owner account or approve operator via `approve`. |
-| 5 | `InvalidReceiver` | Safe transfer target contract rejected token reception or failed check. | Ensure target contract implements `on_nft_received` hook. |
-| 6 | `InvalidTtlConfig` | TTL parameters outside acceptable limits. | Provide valid TTL duration values. |
 
 ---
 
@@ -373,43 +342,7 @@ Defined in [contracts/incentive_campaigns/src/lib.rs](../contracts/incentive_cam
 | 18 | `NoPendingRewards` | The provider has no rewards accrued since their last claim. | Wait for rewards to accumulate over time. |
 | 19 | `RecordNotFound` | `get_distribution_record` was given an unknown id. | Use an id from `list_distribution_records` / `get_claim_history`. |
 
------------------------|-------|--------|
-| `already initialized` | Contract initialized twice. | Initialize once upon deployment. |
-| `not governance` | Restricted method called by non-governance account. | Call using governance credentials. |
-| `not pending governance` | `accept_governance` called by non-nominee. | Call from nominated governance address. |
-| `invalid campaign window` | `end_time <= start_time`. | Ensure `start_time < end_time`. |
-| `reward_rate must be positive` | Reward rate configured as 0. | Specify reward rate > 0. |
-| `funding required` | Funding amount specified as 0. | Supply positive reward funding. |
-| `lp_token does not match pool` | LP token address mismatch with target pool. | Pass LP token matching pool configuration. |
-| `campaign not yet ended` | Emergency recover called before `end_time`. | Wait for campaign end time before recovering unallocated funds. |
-| `no leftover funds to recover` | Recover called when unallocated funds equal 0. | No action needed; funds fully distributed. |
-| `campaign inactive` | Action attempted on inactive campaign. | Activate campaign before interacting. |
-| `campaign not started` | Stake/claim attempted before `start_time`. | Wait for campaign start timestamp. |
-| `no LP balance` | Caller holds 0 LP tokens. | Deposit liquidity to earn LP tokens before staking. |
-| `no LP supply` | Total pool LP supply is 0. | Seed pool with liquidity. |
-| `no pending rewards` | Claim attempted with 0 accumulated rewards. | Wait for reward accumulation over time. |
 
----
-
-## OracleAggregator (`contracts/oracle_aggregator`)
-
-Defined in [contracts/oracle_aggregator/src/lib.rs](../contracts/oracle_aggregator/src/lib.rs) as `OracleError`.
-
-| Code | Symbol | Cause | Remedy |
-|------|--------|-------|--------|
-| 1 | `AlreadyInitialized` | `initialize` called more than once. | Initialize once at deployment. |
-| 2 | `NotInitialized` | Oracle query called before contract initialization. | Initialize contract first. |
-| 3 | `NotAdmin` | Restricted operation called by non-admin. | Call from admin address. |
-| 4 | `SourceAlreadyRegistered` | Oracle source ID already registered. | Update existing source or use unique ID. |
-| 5 | `SourceNotFound` | Referenced oracle source ID not registered. | Register oracle source before querying. |
-| 6 | `InsufficientSources` | Fewer active sources available than required quorum. | Register additional valid oracle sources. |
-| 7 | `InvalidStaleness` | Max staleness parameter is 0 or invalid. | Set positive max staleness duration. |
-| 8 | `InvalidDeviation` | Max allowed price deviation parameter out of bounds. | Set valid deviation threshold. |
-| 9 | `InvalidWeight` | A source weight was zero or exceeded `MAX_SOURCE_WEIGHT`. | Use a positive value. |
-| 10 | `WeightFloorNotMet` | Total agreeing weight fell below the floor. | Register more sources or increase weights. |
-| 11 | `NoPendingAdmin` | `accept_admin` was called when no admin transfer is in progress. | Call `propose_admin` first to nominate a successor. |
-| 12 | `WrongAdmin` | `accept_admin` was called by an address that does not match the pending nominee. | Have the correct address (the one passed to `propose_admin`) call `accept_admin`. |
-| 13 | `Paused` | The aggregator has been paused. | Wait for the admin to call `unpause`. |
 
 ---
 
@@ -512,41 +445,6 @@ Defined in [contracts/token/src/lib.rs](../contracts/token/src/lib.rs) as `Token
 | 8 | `InsufficientLocked` | An unlock exceeded the locker's entry for the holder, or the holder's total locked balance. | Unlock no more than the locker locked for the holder. |
 | 9 | `MigrationOverflow` | A legacy-lock migration would allocate more than the holder's recorded total locked balance. | Migrate an amount within the total locked balance. |
 | 10 | `BalanceUnavailable` | `balance_at` was queried for a ledger whose covering checkpoint has been evicted. | Query a ledger within the retained checkpoint window. |
-
----
-
-## TwalConsumer (`contracts/twal_consumer`)
-
-Defined in [contracts/twal_consumer/src/lib.rs](../contracts/twal_consumer/src/lib.rs) as `TwalError`.
-
-| Code | Symbol | Cause | Remedy |
-|------|--------|-------|--------|
-| 1 | `AlreadyInitialized` | `initialize` called on already set up contract. | Deploy a fresh TWAL consumer. |
-| 2 | `NotInitialized` | Function called before contract initialization. | Call `initialize` first. |
-| 3 | `ZeroWindow` | Time window for TWAL calculation is zero. | Pass window duration > 0. |
-| 4 | `InsufficientHistory` | Available snapshot span shorter than requested window. | Wait for more snapshots to accumulate. |
-| 5 | `NoSnapshotFound` | No snapshot exists at target timestamp. | Ensure snapshots recorded by keeper. |
-| 6 | `ElapsedZero` | Elapsed time between bounding snapshots is zero. | Select window spanning distinct ledger timestamps. |
-
----
-
-## TwapConsumer (`contracts/twap_consumer`)
-
-Defined in [contracts/twap_consumer/src/lib.rs](../contracts/twap_consumer/src/lib.rs) as `TwapError`.
-
-| Code | Symbol | Cause | Remedy |
-|------|--------|-------|--------|
-| 1 | `AlreadyInitialized` | Contract already initialized. | Initialize once. |
-| 2 | `NotInitialized` | Invoked function before initialization. | Call `initialize` first. |
-| 3 | `ZeroWindow` | Time window specified as zero. | Pass window > 0. |
-| 4 | `InsufficientHistory` | Price history span shorter than window. | Allow snapshots to build over time. |
-| 5 | `NoSnapshotFound` | No price snapshot found for timestamp. | Wait for keeper to record snapshot. |
-| 6 | `ElapsedZero` | Time difference between bounding snapshots is zero. | Request TWAP over non-zero interval. |
-| 7 | `InvalidSpotPrice` | Queried spot price zero or negative. | Verify pool liquidity and reserves. |
-| 8 | `InvalidTwapPrice` | Computed TWAP price zero or invalid. | Ensure valid price snapshots exist. |
-| 9 | `InvalidDeviationBps` | Deviation threshold BPS out of bounds. | Pass deviation BPS in `[0, 10 000]`. |
-| 10 | `NegativeCollateral` | Calculated collateral value negative. | Pass positive asset amounts. |
-| 11 | `PriceManipulated` | Spot price deviated beyond allowed BPS from TWAP. | Retry when spot price aligns with TWAP. |
 
 ---
 

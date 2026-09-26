@@ -65,6 +65,7 @@ with open(doc_file, 'r', encoding='utf-8') as f:
     doc_content = f.read()
 
 doc_enums = {}
+duplicate_enums = set()
 current_enum = None
 
 lines = doc_content.splitlines()
@@ -74,6 +75,8 @@ for line in lines:
     if m_defined:
         candidate = m_defined.group(1)
         if candidate in code_enums:
+            if candidate in doc_enums:
+                duplicate_enums.add(candidate)
             current_enum = candidate
             if current_enum not in doc_enums:
                 doc_enums[current_enum] = {}
@@ -110,6 +113,9 @@ for enum_name, data in code_enums.items():
     for doc_var, doc_val in doc_vars.items():
         if doc_var not in code_vars:
             errors.append(f"Extra variant `{doc_var}` documented for `{enum_name}` in docs/error-codes.md but does not exist in code")
+
+for dup in duplicate_enums:
+    errors.append(f"Duplicate documentation section found for enum `{dup}` in docs/error-codes.md")
 
 if errors:
     print("❌ Error code documentation sync check FAILED:\n", file=sys.stderr)
