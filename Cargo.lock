@@ -31,6 +31,7 @@ dependencies = [
 name = "amm_fuzz"
 version = "0.1.0"
 dependencies = [
+ "num-bigint 0.5.1",
  "proptest",
  "soroban-sdk",
 ]
@@ -194,6 +195,7 @@ dependencies = [
  "batch_auction",
  "cl_position_nft",
  "concentrated_liquidity",
+ "dex_aggregator",
  "factory",
  "governance",
  "incentive_campaigns",
@@ -247,7 +249,7 @@ version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0adabf37211a5276e46335feabcbb1530c95eb3fdf85f324c7db942770aa025d"
 dependencies = [
- "num-bigint",
+ "num-bigint 0.4.8",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -286,6 +288,7 @@ name = "cl_position_nft"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk",
+ "soroban_amm_sdk",
 ]
 
 [[package]]
@@ -650,6 +653,7 @@ dependencies = [
  "amm",
  "concentrated_liquidity",
  "governance",
+ "pool_interfaces",
  "soroban-sdk",
  "soroban_amm_sdk",
  "token",
@@ -876,6 +880,7 @@ version = "0.1.0"
 dependencies = [
  "amm",
  "soroban-sdk",
+ "soroban_amm_sdk",
  "token",
 ]
 
@@ -1026,9 +1031,19 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.4.6"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
+checksum = "c89e69e7e0f03bea5ef08013795c25018e101932225a656383bd384495ecc367"
+dependencies = [
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93e7820bc0a80a0238e650327316f929ba18d5be054b647490a3a6a339f3e7c0"
 dependencies = [
  "num-integer",
  "num-traits",
@@ -1131,6 +1146,7 @@ name = "pol_vesting"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk",
+ "soroban_amm_sdk",
 ]
 
 [[package]]
@@ -1358,6 +1374,7 @@ dependencies = [
  "factory",
  "pool_interfaces",
  "soroban-sdk",
+ "soroban_amm_sdk",
  "token",
 ]
 
@@ -1648,7 +1665,7 @@ dependencies = [
  "serde_with",
  "soroban-env-common",
  "soroban-env-host",
- "thiserror",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1701,7 +1718,7 @@ checksum = "c2c70b20e68cae3ef700b8fa3ae29db1c6a294b311fba66918f90cb8f9fd0a1a"
 dependencies = [
  "base64 0.13.1",
  "stellar-xdr",
- "thiserror",
+ "thiserror 1.0.69",
  "wasmparser 0.116.1",
 ]
 
@@ -1718,7 +1735,7 @@ dependencies = [
  "soroban-spec",
  "stellar-xdr",
  "syn 2.0.117",
- "thiserror",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1748,12 +1765,14 @@ name = "soroban_amm_simulator"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "concentrated_liquidity",
  "csv",
  "rand 0.10.3",
  "rand_pcg",
  "serde",
  "serde_json",
- "thiserror",
+ "soroban-sdk",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -1777,6 +1796,7 @@ name = "staking"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk",
+ "soroban_amm_sdk",
  "token",
 ]
 
@@ -1794,7 +1814,7 @@ checksum = "12d2bf45e114117ea91d820a846fd1afbe3ba7d717988fee094ce8227a3bf8bd"
 dependencies = [
  "base32",
  "crate-git-revision",
- "thiserror",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1866,7 +1886,16 @@ version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
 dependencies = [
- "thiserror-impl",
+ "thiserror-impl 1.0.69",
+]
+
+[[package]]
+name = "thiserror"
+version = "2.0.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e"
+dependencies = [
+ "thiserror-impl 2.0.21",
 ]
 
 [[package]]
@@ -1878,6 +1907,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "2.0.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.4",
 ]
 
 [[package]]
@@ -1925,6 +1965,7 @@ version = "0.1.0"
 dependencies = [
  "amm",
  "soroban-sdk",
+ "soroban_amm_sdk",
  "token",
 ]
 
@@ -1934,6 +1975,7 @@ version = "0.1.0"
 dependencies = [
  "amm",
  "soroban-sdk",
+ "soroban_amm_sdk",
  "token",
 ]
 
@@ -1972,6 +2014,7 @@ name = "v2_to_v3_migration"
 version = "0.1.0"
 dependencies = [
  "amm",
+ "pool_interfaces",
  "soroban-sdk",
  "soroban_amm_sdk",
  "token",
