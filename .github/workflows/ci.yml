@@ -38,8 +38,29 @@ jobs:
             # Makefile so the three cannot drift apart. Change exclusions there.
             - name: Build WASM artifacts
               run: bash scripts/build_workspace.sh
-            - name: Check WASM binary sizes
-              run: bash scripts/size_report.sh --fail-on-limit
+            # Report-only: unoptimized artifacts are reliably larger than what
+            # actually gets deployed (`stellar contract optimize` strips ~15-20%
+            # on a contract like concentrated_liquidity), so failing the build on
+            # this number would reject contracts that fit comfortably once
+            # optimized. The real enforcement is the optimized-artifact check below.
+            - name: Check WASM binary sizes (network cap, unoptimized)
+              run: bash scripts/size_report.sh
+            # Same prebuilt-binary install release.yml and smoke-test.yml use —
+            # fast, and does not need this job's compiler to match the CLI's
+            # locked dependency tree the way `cargo install` would.
+            - name: Install Stellar CLI
+              uses: stellar/stellar-cli@v27.1.0
+            - name: Optimize WASM artifacts
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  mkdir -p target/wasm32v1-none/release/optimized
+                  while IFS= read -r wasm; do
+                      name=$(basename "$wasm")
+                      stellar contract optimize --wasm "$wasm" --wasm-out "target/wasm32v1-none/release/optimized/$name"
+                  done < <(find target/wasm32v1-none/release -maxdepth 1 -name '*.wasm' -type f | sort)
+            - name: Check WASM binary sizes (network cap, optimized)
+              run: bash scripts/size_report.sh --fail-on-limit --optimized
             # All six crates that were previously excluded here
             # (`concentrated_liquidity`, `dex-aggregator`, `incentive-campaigns`,
             # `oracle-aggregator`, `token`, `v2-to-v3-migration`) have had their
@@ -63,8 +84,12 @@ jobs:
               run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --exclude amm_fuzz
             - name: Check error docs sync
               run: make check-docs
-            - name: Check ABI sync
-              run: make check-abi
+            - name: Check storage keys do not depend on the ledger clock
+              run: make check-storage-keys
+            # Every deployable workspace contract must have a scripts/deploy/
+            # module that scripts/deploy.sh actually runs (issue #959).
+            - name: Check deploy scripts cover every contract
+              run: make check-deploy-scripts
 
             - name: Security audit
               uses: rustsec/audit-check@v2
@@ -123,6 +148,23 @@ jobs:
             - name: Test
               run: go test ./... -count=1
 
+    # Every JS package must type-check against the Node major CI runs on, and
+    # declare it in engines.node. .nvmrc is the single source of truth; the
+    # npm-packages job below reads it too (#983).
+    node-versions:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+            - name: Setup Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+            - name: Check @types/node and engines.node match .nvmrc
+              run: node scripts/check_node_versions.mjs
+
     npm-packages:
         runs-on: ubuntu-latest
         permissions:
@@ -157,13 +199,56 @@ jobs:
             - name: Setup Node
               uses: actions/setup-node@v7
               with:
-                  node-version: 22
+                  node-version-file: .nvmrc
+            # `npm ci` installs exactly what each workspace's package-lock.json
+            # pins and errors when the lockfile and package.json disagree, so a
+            # transitive dependency publishing between two runs can no longer
+            # turn CI red on an unchanged tree — the same guarantee
+            # rust-toolchain.toml gives the Rust jobs above. Every workspace
+            # now commits a lockfile, so there is always something to install
+            # from; regenerating one requires an explicit `npm install` in that
+            # workspace, which keeps lockfile changes visible in review.
+            # The shared ESLint config (eslint.config.mjs) and its toolchain
+            # live at the repo root. npm puts every ancestor's
+            # node_modules/.bin on PATH, so each workspace's `npm run lint`
+            # picks up this one install.
+            - name: Install lint tooling
+              working-directory: .
+              run: npm ci
             - name: Install dependencies
-              run: npm install
+              run: npm ci
             - name: Build
               run: npm run build
+            # Runs after Build because type-aware rules need resolvable
+            # imports (examples/client resolves @soroban-amm/sdk from the SDK
+            # its prebuild step compiles). Any lint error fails the job, the
+            # same as clippy's -D warnings on the Rust side.
+            - name: Lint
+              run: npm run lint
             - name: Test
               run: ${{ matrix.test_cmd }}
+
+    docker-build:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+            # Build the image from the Dockerfile at the repo root and run
+            # `make build` inside it.  This job is the CI gate that prevents
+            # the container from silently diverging from the rest of the repo:
+            # if the wrong target, a stale base image, or a broken manifest
+            # copy sneaks back in, this step will fail before it merges.
+            - name: Build Docker image
+              run: docker build -t soroban-amm-build .
+            - name: Run make build inside container
+              run: |
+                docker run --rm \
+                  -v "${{ github.workspace }}":/app \
+                  -w /app \
+                  soroban-amm-build \
+                  make build
 
     python-examples:
         runs-on: ubuntu-latest

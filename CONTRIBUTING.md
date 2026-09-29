@@ -62,9 +62,40 @@ you'd like to work on and we'll help you find a starting point.
     To move the toolchain, bump `channel` in that file in its own PR rather
     than upgrading locally — otherwise your build and CI's diverge.
 
-- **Stellar CLI** (for building optimized WASM and deploying) — see the
-  [Stellar CLI install guide](https://developers.stellar.org/docs/tools/developer-tools/cli/install-cli).
+- **Stellar CLI** (for building optimized WASM and deploying) — the exact
+  version is pinned in [`.stellar-version`](.stellar-version) and is read by the
+  `Dockerfile`. Install that version rather than the latest release:
+
+    ```bash
+    cargo install --locked stellar-cli --version "$(cat .stellar-version)"
+    ```
+
+    The pin is deliberate — see
+    [Why the Stellar CLI version is pinned](#why-the-stellar-cli-version-is-pinned).
+    To move it, bump the single line in `.stellar-version` in its own PR; the
+    container follows from it, and `release.yml` pins the same version
+    through the `stellar/stellar-cli` action.
 - `make` (optional but recommended — the `Makefile` wraps the common commands).
+
+### Why the Stellar CLI version is pinned
+
+`stellar contract optimize` turns the workspace WASM into the artifacts published
+in a GitHub release, so the CLI version decides the bytes users deploy. It used
+to be written out in three places — `Dockerfile` (25.1.0), `release.yml`
+(23.0.0) and `smoke-test.yml` (27.1.0) — so the optimizer that produced a
+release artifact and the CLI the smoke test deployed it with were four major
+versions apart, and `stellar contract optimize` output changing between them
+would have gone unnoticed. That is the same hazard `rust-toolchain.toml` guards
+against for the compiler, so the CLI version now lives in one file that the
+container reads, with `release.yml` pinning the same version explicitly.
+
+The version is chosen deliberately rather than by taking the newest release.
+`27.1.0` is what this image can build: `--locked` compiles the CLI's own
+`Cargo.lock` with the toolchain above, and `25.1.0` locks `ethnum 1.5.2`,
+which Rust 1.98.1 rejects with E0512 (`cannot transmute between types of
+different sizes`). `27.1.0` locks `ethnum 1.5.3`, the version this workspace
+already builds with, so the container, the release optimizer and the smoke
+test all agree on a CLI that compiles here.
 
 ---
 
@@ -104,12 +135,12 @@ make test-all   # run tests for the whole workspace
 make fmt        # cargo fmt --all
 make lint       # cargo clippy --all -- -D warnings
 make check-docs # verify docs/error-codes.md matches #[contracterror] enums
-make check-abi  # verify docs/abi.json matches built contracts (regenerate with scripts/generate_abi.sh)
+make check-deploy-scripts # fail if a contract has no scripts/deploy/ module
 make size       # print a WASM size report for all built contracts
 make size-check # fail if any contract WASM exceeds the size limit
 make doc        # build workspace docs with warnings denied
 make audit      # run a security audit of dependencies (cargo-audit)
-make check      # fmt + lint + test + check-docs + size-check + doc (run before pushing)
+make check      # fmt + lint + test + check-docs + check-deploy-scripts + size-check + doc (run before pushing)
 make bench      # hot-path benchmarks
 make deploy     # deploy contracts via scripts/deploy.sh
 make e2e        # run the end-to-end test suite
@@ -133,6 +164,20 @@ This is intended to track the same set of checks CI enforces in
   (edition 2021, 100-column width, crate-granularity imports). Run
   `make fmt` before committing.
 - **Linting**: `cargo clippy` must pass with **no warnings** (`-D warnings`).
+- **JavaScript/TypeScript linting**: every JS workspace (`packages/sdk`,
+  `packages/ui-components`, `packages/ts-advanced-client`, `services/*`,
+  `examples/client`) is linted by the shared `eslint.config.mjs` at the repo
+  root, which extends typescript-eslint's `recommended-type-checked` set, and
+  CI fails on any error. Run `npm ci` once at the root and in the workspace,
+  build it, then `npm run lint` there (or `make lint-js` for all of them).
+  Rules are errors or deliberately off with a reason in the config; there is
+  no warn-only tier.
+- **Node version**: `.nvmrc` pins the Node major that CI runs every JS package
+  on. Each package declares it as `engines.node`, and any `@types/node`
+  dependency uses the same major, so `tsc` cannot accept an API the CI runtime
+  lacks. `make check-node-versions` (run in CI) fails on any mismatch. Moving to
+  a new Node major means changing `.nvmrc`, every `@types/node` and every
+  `engines.node` together, in one PR, with the lockfiles regenerated.
 - **WASM size**: contract binaries are size-constrained — CI fails any WASM over
   the configured limit. Prefer minimal dependencies and avoid unnecessary
   allocations in hot paths.
@@ -221,3 +266,4 @@ that violate this standard.
 
 By contributing, you agree that your contributions will be licensed under the
 [MIT License](LICENSE) that covers this project.
+

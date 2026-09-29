@@ -15,8 +15,12 @@ from common import (
 )
 
 
-def main() -> int:
-    argparse.ArgumentParser(description="Soroban AMM integration example").parse_args()
+def main(argv: list[str] | None = None) -> int:
+    # Explicit empty-by-default argv, not the implicit sys.argv[1:] default,
+    # so main() is safely callable as a plain function (e.g. from tests running
+    # under pytest) without this no-op parser choking on the caller's own CLI
+    # flags and exiting the whole process with SystemExit(2).
+    argparse.ArgumentParser(description="Soroban AMM integration example").parse_args(argv if argv is not None else [])
     rpc_url = os.getenv("STELLAR_RPC_URL", "https://soroban-testnet.stellar.org")
     network_passphrase = os.getenv(
         "STELLAR_NETWORK_PASSPHRASE",
@@ -59,6 +63,8 @@ def main() -> int:
                 print("No governance contract was deployed (governance_wasm_hash not supplied).")
         except Exception as e:
             print(f"Failed to create pool (might already exist): {e}")
+            client.server.close()
+            return 1
     else:
         print("\n2. Pool already exists, skipping create_pool.")
 
@@ -128,7 +134,7 @@ def all_pools(client: ContractClient) -> list[str]:
 
 if __name__ == "__main__":
     try:
-        raise SystemExit(main())
+        raise SystemExit(main(sys.argv[1:]))
     except Exception as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(1) from exc

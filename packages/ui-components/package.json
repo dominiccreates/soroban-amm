@@ -11,10 +11,14 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint ."
   },
   "peerDependencies": {
     "react": ">=18",
@@ -24,11 +28,11 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.6.7",
-    "@vitest/coverage-v8": "^5.0.1",
+    "@vitest/coverage-v8": "^5.0.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/node": "^22.20.4",
-    "jsdom": "^25.0.1",
+    "jsdom": "^30.1.1",
     "typescript": "^5.6.0",
     "vitest": "^5.0.0",
     "react": "^19.3.0",

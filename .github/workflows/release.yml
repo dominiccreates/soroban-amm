@@ -27,10 +27,20 @@ jobs:
       # and the Makefile. Change the exclusions there, not here.
       - name: Build contracts
         run: bash scripts/build_workspace.sh
-      - name: Check contract sizes
-        run: bash scripts/size_report.sh --fail-on-limit
+      # Report-only: unoptimized artifacts are reliably larger than what
+      # actually gets deployed (`stellar contract optimize` strips ~15-20%
+      # on a contract like concentrated_liquidity), so failing the release on
+      # this number would reject contracts that fit comfortably once
+      # optimized. The real enforcement is the optimized-artifact check below.
+      - name: Check contract sizes (unoptimized)
+        run: bash scripts/size_report.sh
+      # Same version as the Dockerfile, README.md and smoke-test.yml, installed
+      # the same way smoke-test.yml does. Building it with `cargo install`
+      # here compiled the CLI under rust-toolchain.toml, where the 23.0.0 pin
+      # locked an ethnum that no longer compiles (1.5.0), and needs system
+      # headers (libdbus, libudev) the runner is not guaranteed to have.
       - name: Install Stellar CLI
-        run: cargo install --locked stellar-cli --version 23.0.0
+        uses: stellar/stellar-cli@v27.1.0
       - name: Optimize WASM artifacts
         shell: bash
         run: |
@@ -38,8 +48,10 @@ jobs:
           mkdir -p release-artifacts
           while IFS= read -r wasm; do
             name=$(basename "$wasm")
-            stellar contract optimize --wasm "$wasm" --output "release-artifacts/$name"
+            stellar contract optimize --wasm "$wasm" --wasm-out "release-artifacts/$name"
           done < <(find target/wasm32v1-none/release -maxdepth 1 -name '*.wasm' -type f | sort)
+      - name: Check contract sizes (optimized, network cap)
+        run: WASM_DIR=release-artifacts bash scripts/size_report.sh --fail-on-limit
       - name: Generate checksums
         working-directory: release-artifacts
         run: sha256sum *.wasm > sha256sums.txt
