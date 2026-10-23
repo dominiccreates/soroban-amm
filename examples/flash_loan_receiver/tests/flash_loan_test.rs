@@ -337,7 +337,6 @@ fn total_tokens_are_conserved() {
     );
 }
 
-
 // ===========================================================================
 // Failure mode tests (cited in README)
 // ===========================================================================
@@ -438,9 +437,12 @@ fn reentrancy_attempt_rejected() {
         &0,
         &soroban_sdk::Bytes::new(&fixture.env),
     );
-    assert!(res.is_err());
-    let err = res.err().unwrap();
-    assert_eq!(err, Ok(SdkAmmError::Reentrant));
+    // Soroban's host refuses any call back into a contract that is already on
+    // the call stack, so the re-entrant `get_info` is trapped by the host
+    // (`InvokeError::Abort`) before the pool's own `Reentrant` guard can return
+    // its contract error. Either way the whole flash loan must fail.
+    let err = res.expect_err("re-entrant flash loan must fail");
+    assert_eq!(err, Err(soroban_sdk::InvokeError::Abort));
 }
 
 mod mock_incomplete_repayment {
@@ -581,7 +583,10 @@ fn stranger_cannot_call_on_flash_loan() {
         &0,
         &soroban_sdk::Bytes::new(&fixture.env),
     );
-    assert!(res.is_err(), "Direct call by stranger must fail authorization");
+    assert!(
+        res.is_err(),
+        "Direct call by stranger must fail authorization"
+    );
 
     // Receiver balance must be completely unchanged
     let balance_after = fixture.get_token_balance(&fixture.token_a, &fixture.receiver);
@@ -603,7 +608,10 @@ fn second_initialize_fails_with_already_initialized() {
     let res = receiver_client.try_initialize(&attacker_pool, &attacker_owner);
     assert!(res.is_err());
     let err = res.err().unwrap();
-    assert_eq!(err, Ok(flash_loan_receiver::ReceiverError::AlreadyInitialized));
+    assert_eq!(
+        err,
+        Ok(flash_loan_receiver::ReceiverError::AlreadyInitialized)
+    );
 }
 
 #[test]
@@ -653,7 +661,10 @@ fn legitimate_flash_loan_with_mock_auths_for_borrower_succeeds() {
 
     let final_info = fixture.get_pool_info();
     let expected_fee_a = (borrow_amount_a * 5) / 10_000;
-    assert_eq!(final_info.reserve_a, initial_info.reserve_a + expected_fee_a);
+    assert_eq!(
+        final_info.reserve_a,
+        initial_info.reserve_a + expected_fee_a
+    );
 }
 
 #[test]

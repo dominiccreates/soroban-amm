@@ -125,20 +125,6 @@ pub struct FlashLoanReceiver;
 
 #[contractimpl]
 impl FlashLoanReceiver {
-    /// Initialize the receiver with the pool address.
-    ///
-    /// This must be called before any flash loan callback. It stores the pool
-    /// address and looks up its token pair once, up front, since `get_info`
-    /// cannot be called on the pool from inside `on_flash_loan` — the pool is
-    /// still on the call stack there, and Soroban's host rejects any call
-    /// back into a contract that is already executing, regardless of whether
-    /// the call is a plain read.
-    ///
-    /// # Arguments
-    /// - `pool`: The address of the AMM pool contract
-    ///
-    /// # Panics
-    /// None; initialization is idempotent.
     /// Initialize the receiver with the pool address and owner address.
     ///
     /// This must be called before any flash loan callback. It stores the pool
@@ -191,7 +177,12 @@ impl FlashLoanReceiver {
     ///
     /// # Errors
     /// Returns [`ReceiverError::NotInitialized`] if the receiver has not been initialized.
-    pub fn rescue(env: Env, token: Address, amount: i128, to: Address) -> Result<(), ReceiverError> {
+    pub fn rescue(
+        env: Env,
+        token: Address,
+        amount: i128,
+        to: Address,
+    ) -> Result<(), ReceiverError> {
         let owner: Address = match env.storage().instance().get(&DataKey::Owner) {
             Some(addr) => addr,
             None => return Err(ReceiverError::NotInitialized),
