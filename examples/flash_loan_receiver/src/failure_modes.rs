@@ -167,7 +167,7 @@ pub fn incomplete_repayment_on_flash_loan(
     //
     // The pool's post-callback check will detect the shortfall:
     //     balance_after < balance_before + amount + fee
-    // and revert with InsufficientLiquidity.
+    // and revert with FlashLoanRepaymentFailed (error code 18).
 
     let _ = (fee_a, fee_b); // Unused in this wrong implementation
 
@@ -209,25 +209,4 @@ pub fn wrong_recipient_on_flash_loan(
     false // Abort to avoid this error in the test
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn insufficient_profit_aborts_cleanly() {
-        // Tested in flash_loan_test.rs with real pool interaction
-    }
 
-    #[test]
-    fn reentrancy_attempt_rejected() {
-        // Tested in flash_loan_test.rs with real pool interaction
-    }
-
-    #[test]
-    fn incomplete_repayment_reverts() {
-        // Tested in flash_loan_test.rs with real pool interaction
-    }
-
-    #[test]
-    fn wrong_recipient_reverts() {
-        // Tested in flash_loan_test.rs with real pool interaction
-    }
-}
