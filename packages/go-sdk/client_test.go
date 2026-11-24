@@ -809,11 +809,11 @@ func decodeSimulatedInvocation(t *testing.T, rec *recordedRPC) (string, string, 
 	if got := readInt32OrFail(t, r); got != muxedAccountEd25519 {
 		t.Fatalf("muxed account type = %d, want %d", got, muxedAccountEd25519)
 	}
-	if _, err := r.readRaw(32); err != nil { // source account
+	if _, err := r.readRaw(32); err != nil {
 		t.Fatalf("reading source account: %v", err)
 	}
-	readUint32OrFail(t, r) // fee
-	if _, err := r.readUint64(); err != nil { // sequence
+	readUint32OrFail(t, r)
+	if _, err := r.readUint64(); err != nil {
 		t.Fatalf("reading sequence: %v", err)
 	}
 	cond := readInt32OrFail(t, r)
@@ -825,9 +825,10 @@ func decodeSimulatedInvocation(t *testing.T, rec *recordedRPC) (string, string, 
 			t.Fatalf("reading max time: %v", err)
 		}
 	}
-	readInt32OrFail(t, r)  // memo
-	readUint32OrFail(t, r) // operations count
-	readUint32OrFail(t, r) // operation source account present flag
+	// memo, operation count, operation source-account flag
+	readInt32OrFail(t, r)
+	readUint32OrFail(t, r)
+	readUint32OrFail(t, r)
 	if op := readInt32OrFail(t, r); op != opTypeInvokeHostFn {
 		t.Fatalf("operation type = %d, want %d", op, opTypeInvokeHostFn)
 	}
